@@ -37,5 +37,5 @@ def test1_wf_on():
 # Application tester init function
 if __name__ == '__main__':
     #close_water_flow()
-    open_water_flow(30)
+    open_water_flow(10)
     test1_wf_on()

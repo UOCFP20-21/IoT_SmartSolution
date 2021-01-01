@@ -1,7 +1,8 @@
 """
 Script that controls solenoid valve actions
 """
-status = ""
+from flowmeter.flowmeter_controller import clear_readings
+
 switch_name = "SECTOR1_SWITCH"
 valve_name = "SECTOR1_VALVE"
 
@@ -12,9 +13,10 @@ def open_close_valve(order):
 
 
 def order_to_switch(order):
-    global status
+
     if order == "true":
         print(f"{switch_name} : order sent > Open valve")
     else:
+        clear_readings()
         print(f"{switch_name} : order sent > Close valve")
-    status = (open_close_valve(order))
+    return open_close_valve(order)
