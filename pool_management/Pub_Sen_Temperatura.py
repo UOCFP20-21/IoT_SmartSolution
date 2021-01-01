@@ -3,7 +3,7 @@ import time
 import random
 import statistics as stats
 
-broker_address = "localhost"
+broker_address = "192.168.1.100"
 broker_port = 1883
 keep_alive = 60
 client = mqtt.Client('Sensor_Temperatura')

@@ -3,7 +3,7 @@ import time
 import json
 import datetime
 
-broker_address = "localhost"
+broker_address = "192.168.1.100"
 broker_port = 1883
 keep_alive = 60
 client = mqtt.Client('Depuradora')

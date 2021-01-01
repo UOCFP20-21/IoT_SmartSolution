@@ -62,7 +62,7 @@ client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
 
-client.connect("192.168.1.101", 1883, 60)
+client.connect("192.168.1.100", 1883, 60)
 
 # Blocking call that processes network traffic, dispatches callbacks and
 # handles reconnecting.
