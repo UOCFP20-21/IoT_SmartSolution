@@ -4,15 +4,19 @@ and sends info-data received from flowmeter controller to mqtt broker server
 """
 import json
 import sys
-import time
 import datetime
-
 import paho.mqtt.client as mqtt
 
-from flowmeter import flowmeter_controller
+from azure.iot.device import IoTHubDeviceClient, Message
+
 from flowmeter.flowmeter_controller import get_flow, average
 from flowmeter.valve_controller import order_to_switch
 
+
+connection_str = "HostName=Sometimes.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=OA+DftOx6wNYgPqhiHtpS4dggrLhjaYGzJLjwl0zQEc="
+device_id = "riego_sector1_arduino"
+device_key = "e1/gnH8sxq/0ZHV38e283xxIq0gEYShcL03P2GS1uQU="
+device_conn_str = "HostName=Sometimes.azure-devices.net;DeviceId=riego_sector1_arduino;SharedAccessKey=e1/gnH8sxq/0ZHV38e283xxIq0gEYShcL03P2GS1uQU="
 MQTTBroker = "192.168.1.100"
 port = 1883
 arduino_name = "RIEGO_SECTOR1_ARDUINO"
@@ -31,6 +35,10 @@ info_topic = "/Info"
 water_flow = 25
 valve_status = ""
 min_flow_accepted = 1
+_status = False
+client_azure = IoTHubDeviceClient
+
+azure_template = '{{"flow": {_flow}, "sector": {_sector}, "valveState": {_valve}}}'
 
 warning_msg = ["No alerts", "Low water flow", "No water flow", "Flushing not stopped"]
 
@@ -85,7 +93,7 @@ def send_valve_status(order):
 
 
 def get_info():
-    global warning_msg, valve_status
+    global warning_msg, valve_status, _status, device_id, device_key
 
     _status = False
     if valve_status == "true":
@@ -111,6 +119,27 @@ def get_info():
         "min_flow": min_flow_accepted
     }
     return json.dumps(info)
+
+
+def get_info_to_azure():
+    global device_key, device_id, _status, sector, azure_template
+    flow = get_flow()
+    valve = int(_status)
+    message = azure_template.format(_flow=flow, _sector=sector, _valve=valve)
+    azure_msg = Message(message)
+    return azure_msg
+
+
+def send_info_to_azure():
+    global client_azure
+    try:
+        message = get_info_to_azure()
+        client_azure.send_message(message)
+        print("Mensaje enviado a azure con éxito")
+    except Exception as ex:
+        print(f"Error inesperado: {ex}")
+    except KeyboardInterrupt:
+        print("iothub_statistics stopped")
 
 
 def send_info(info):
@@ -148,17 +177,26 @@ def received_topic(client, userdata, message):
     # info
     if message.topic == client_topic + info_topic:
         send_info(get_info())
+        send_info_to_azure()
         return
 
 
-# noinspection PyBroadException
+def iothub_client_init():
+    client = IoTHubDeviceClient.create_from_connection_string(device_conn_str, websockets=True)
+    return client
+
+
 def connect_arduino():
+    global client_azure
     try:
         print(f"{arduino_name} > Connecting to {MQTTBroker} at port {port}...")
         device_arduino.connect(MQTTBroker, port)
         print(f"{arduino_name} > Connected!")
         device_arduino.subscribe(client_topic + "/#")
         print(f"{arduino_name} > Listening at '{client_topic}' topic")
+        print('---------------------------------------------')
+        print('Connecting to azure...')
+        client_azure = iothub_client_init()
         device_arduino.on_message = received_topic
         device_arduino.loop_forever()
     except Exception as ex:
